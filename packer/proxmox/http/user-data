@@ -1,0 +1,29 @@
+#cloud-config
+autoinstall:
+  version: 1
+  refresh-installer:
+    update: true
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  timezone: Europe/Moscow
+  identity:
+    hostname: ubuntu-2404
+    username: carl
+    password: "$6$packer$RmlcDTJJzpsOR/SQADnFKxtQkUek8V12TfTAsBYvEIGBp2uQV9JpDSfaOdK6JmVS00N6NAQlO5YQoJ9tNvlJC0"
+  ssh:
+    install-server: true
+    allow-pw: true
+  storage:
+    layout:
+      name: direct
+  packages:
+    - ca-certificates
+    - cloud-init
+    - curl
+    - gnupg
+    - qemu-guest-agent
+    - vim
+  late-commands:
+    - curtin in-target --target=/target -- systemctl enable qemu-guest-agent
+  shutdown: reboot
