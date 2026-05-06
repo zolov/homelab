@@ -1,4 +1,7 @@
 variables.pkrvars.hcl
 packer_cache/
+downloaded_iso_path/
+output/
+output-*/
+*.qcow2
 *.log
-
