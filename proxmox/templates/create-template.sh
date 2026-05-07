@@ -2,6 +2,10 @@
 
 set -Eeuo pipefail
 
+RED='\e[31m'
+GREEN='\e[32m'
+NC='\e[0m' # No Color (Reset)
+
 ########################################
 # LOAD ENV
 ########################################
@@ -9,7 +13,7 @@ set -Eeuo pipefail
 ENV_FILE="$(dirname "$0")/.env"
 
 if [[ -f "${ENV_FILE}" ]]; then
-  echo "===> Loading ${ENV_FILE}"
+  echo -e "${GREEN}===> Loading ${ENV_FILE}${NC}"
 
   set -a
   # shellcheck disable=SC1090
@@ -57,14 +61,14 @@ if [[ -n "${TEMPLATE_SSH_PUBLIC_KEY:-}" ]]; then
 fi
 
 cleanup() {
-  echo "===> Cleanup completed"
+  echo -e "${GREEN}===> Cleanup completed${NC}"
 }
 
 trap cleanup EXIT
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 || {
-    echo "ERROR: Required command not found: $1" >&2
+    echo -e "${RED}ERROR: Required command not found: $1 ${NC}" >&2
     exit 1
   }
 }
@@ -76,19 +80,19 @@ require_command() {
 require_command qm
 
 if [[ ! -f "${IMG_PATH}" ]]; then
-  echo "ERROR: Image not found:"
-  echo "${IMG_PATH}"
+  echo -e "${RED}ERROR: Image not found:${NC}"
+  echo -e "${IMG_PATH}"
   exit 1
 fi
 
 if [[ ! -f "${SSH_KEY_PATH}" ]]; then
-  echo "ERROR: SSH public key not found:"
-  echo "${SSH_KEY_PATH}"
+  echo -e "${RED}ERROR: SSH public key not found:${NC}"
+  echo -e "${SSH_KEY_PATH}"
   exit 1
 fi
 
 if qm status "${VM_ID}" >/dev/null 2>&1; then
-  echo "ERROR: VM ${VM_ID} already exists"
+  echo -e "${RED}ERROR: VM ${VM_ID} already exists${NC}"
   exit 1
 fi
 
@@ -96,7 +100,7 @@ fi
 # CREATE VM
 ########################################
 
-echo "===> Creating VM ${VM_ID}"
+echo -e "${GREEN}===> Creating VM ${VM_ID}${NC}"
 
 qm create "${VM_ID}" \
   --name "${VM_NAME}" \
@@ -118,7 +122,7 @@ qm create "${VM_ID}" \
 # IMPORT DISK
 ########################################
 
-echo "===> Importing disk"
+echo -e "${GREEN}===> Importing disk${NC}"
 
 qm importdisk \
   "${VM_ID}" \
@@ -129,7 +133,7 @@ qm importdisk \
 # ATTACH DISK
 ########################################
 
-echo "===> Attaching disk"
+echo -e "${GREEN}===> Attaching disk${NC}"
 
 qm set "${VM_ID}" \
   --scsihw virtio-scsi-single \
@@ -139,7 +143,7 @@ qm set "${VM_ID}" \
 # EFI DISK
 ########################################
 
-echo "===> Creating EFI disk"
+echo -e "${GREEN}===> Creating EFI disk${NC}"
 
 qm set "${VM_ID}" \
   --efidisk0 "${STORAGE}:1,format=raw,efitype=4m,pre-enrolled-keys=1"
@@ -148,7 +152,7 @@ qm set "${VM_ID}" \
 # CLOUD-INIT
 ########################################
 
-echo "===> Configuring cloud-init"
+echo -e "${GREEN}===> Configuring cloud-init${NC}"
 
 qm set "${VM_ID}" \
   --ide2 "${STORAGE}:cloudinit"
@@ -165,7 +169,7 @@ qm set "${VM_ID}" \
 # RESIZE DISK
 ########################################
 
-echo "===> Resizing disk to ${DISK_SIZE}"
+echo -e "${GREEN}===> Resizing disk to ${DISK_SIZE}${NC}"
 
 qm resize "${VM_ID}" scsi0 "${DISK_SIZE}"
 
@@ -173,11 +177,11 @@ qm resize "${VM_ID}" scsi0 "${DISK_SIZE}"
 # ENABLE QEMU AGENT
 ########################################
 
-echo "===> Starting VM for initial cloud-init cleanup"
+echo -e "${GREEN}===> Starting VM for initial cloud-init cleanup${NC}"
 
 qm start "${VM_ID}"
 
-echo "===> Waiting for guest agent"
+echo -e "${GREEN}===> Waiting for guest agent${NC}"
 
 for i in {1..30}; do
   if qm guest ping "${VM_ID}" >/dev/null 2>&1; then
@@ -191,7 +195,7 @@ done
 # CLEAN CLOUD-INIT STATE
 ########################################
 
-echo "===> Cleaning cloud-init state"
+echo -e "${GREEN}===> Cleaning cloud-init state${NC}"
 
 qm guest exec "${VM_ID}" -- bash -c "cloud-init clean"
 
@@ -199,7 +203,7 @@ qm guest exec "${VM_ID}" -- bash -c "cloud-init clean"
 # SHUTDOWN VM
 ########################################
 
-echo "===> Shutting down VM"
+echo -e "${GREEN}===> Shutting down VM${NC}"
 
 qm shutdown "${VM_ID}" --timeout 300
 
@@ -211,7 +215,7 @@ done
 # CONVERT TO TEMPLATE
 ########################################
 
-echo "===> Converting VM to template"
+echo -e "${GREEN}===> Converting VM to template${NC}"
 
 qm template "${VM_ID}"
 
@@ -219,17 +223,17 @@ qm template "${VM_ID}"
 # FINAL INFO
 ########################################
 
-echo
-echo "========================================"
-echo "Template created successfully"
-echo "========================================"
-echo
-echo "VM ID:      ${VM_ID}"
-echo "VM Name:    ${VM_NAME}"
-echo "Storage:    ${STORAGE}"
-echo "Disk Size:  ${DISK_SIZE}"
-echo
-echo "Clone example:"
-echo
-echo "qm clone ${VM_ID} 151  --name vm-151 --target proxmox --storage local-lvm --full"
+echo -e
+echo -e "========================================${NC}"
+echo -e "${GREEN}Template created successfully${NC}"
+echo -e "========================================${NC}"
+echo -e
+echo -e "VM ID:      ${VM_ID}${NC}"
+echo -e "VM Name:    ${VM_NAME}${NC}"
+echo -e "Storage:    ${STORAGE}${NC}"
+echo -e "Disk Size:  ${DISK_SIZE}${NC}"
+echo -e
+echo -e "Clone example:${NC}"
+echo -e
+echo -e "qm clone ${VM_ID} 151  --name vm-151 --target proxmox --storage local-lvm --full${NC}"
 

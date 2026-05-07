@@ -2,6 +2,10 @@
 
 set -Eeuo pipefail
 
+RED='\e[31m'
+GREEN='\e[32m'
+NC='\e[0m' # No Color (Reset)
+
 ########################################
 # LOAD ENV
 ########################################
@@ -9,7 +13,7 @@ set -Eeuo pipefail
 ENV_FILE="$(dirname "$0")/.env"
 
 if [[ -f "${ENV_FILE}" ]]; then
-  echo "===> Loading ${ENV_FILE}"
+  echo -e "${GREEN}===> Loading ${ENV_FILE}${NC}"
 
   set -a
   # shellcheck disable=SC1090
@@ -34,14 +38,14 @@ WORK_IMG_PATH="${IMG_DIR}/${WORK_IMG_NAME}"
 ########################################
 
 cleanup() {
-  echo "===> Cleanup completed"
+  echo -e "${GREEN}===> Cleanup complete${NC}"
 }
 
 trap cleanup EXIT
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 || {
-    echo "ERROR: Required command not found: $1" >&2
+    echo -e "${RED}ERROR: Required command not found: $1${NC}" >&2
     exit 1
   }
 }
@@ -58,7 +62,7 @@ require_command qemu-img
 # INSTALL DEPENDENCIES
 ########################################
 
-echo "===> Installing dependencies"
+echo -e "${GREEN}===> Installing dependencies ${NC}"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -72,11 +76,11 @@ apt-get install -y \
 # DOWNLOAD IMAGE
 ########################################
 
-echo "===> Preparing directories"
+echo -e "${GREEN}===> Preparing directories${NC}"
 
 mkdir -p "${IMG_DIR}"
 
-echo "===> Downloading Ubuntu cloud image"
+echo -e "${GREEN}===> Downloading Ubuntu cloud image${NC}"
 
 wget -q --show-progress -O "${IMG_PATH}" "${IMG_URL}"
 
@@ -84,7 +88,7 @@ wget -q --show-progress -O "${IMG_PATH}" "${IMG_URL}"
 # VALIDATE IMAGE
 ########################################
 
-echo "===> Validating image format"
+echo -e "${GREEN}===> Validating image format${NC}"
 
 qemu-img info "${IMG_PATH}"
 
@@ -92,7 +96,7 @@ qemu-img info "${IMG_PATH}"
 # CREATE WORKING IMAGE
 ########################################
 
-echo "===> Creating working qcow2 image"
+echo -e "${GREEN}===> Creating working qcow2 image${NC}"
 
 rm -f "${WORK_IMG_PATH}"
 
@@ -106,7 +110,7 @@ qemu-img convert \
 # CUSTOMIZE IMAGE
 ########################################
 
-echo "===> Customizing image"
+echo -e "${GREEN}===> Customizing image${NC}"
 
 virt-customize \
   -a "${WORK_IMG_PATH}" \
@@ -121,11 +125,11 @@ virt-customize \
 # FINAL INFO
 ########################################
 
-echo
-echo "========================================"
-echo "Ubuntu cloud image prepared successfully"
-echo "========================================"
-echo
-echo "Image path:"
-echo "${WORK_IMG_PATH}"
-echo
+echo -e
+echo -e "========================================"
+echo -e "${GREEN}Ubuntu cloud image prepared successfully${NC}"
+echo -e "========================================"
+echo -e
+echo -e "Image path:"
+echo -e "${WORK_IMG_PATH}"
+echo -e
