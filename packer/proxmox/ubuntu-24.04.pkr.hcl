@@ -2,82 +2,39 @@ packer {
   required_version = ">= 1.10.0"
 
   required_plugins {
-    proxmox = {
-      source  = "github.com/hashicorp/proxmox"
-      version = ">= 1.2.1"
+    qemu = {
+      source  = "github.com/hashicorp/qemu"
+      version = ">= 1.1.0"
     }
   }
 }
 
-variable "proxmox_url" {
+variable "cloud_image_url" {
   type        = string
-  description = "Proxmox API URL, for example https://pve.example.local:8006/api2/json"
+  description = "Ubuntu cloud image URL used as the base disk."
+  default     = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
 }
 
-variable "proxmox_username" {
+variable "cloud_image_checksum" {
   type        = string
-  description = "Proxmox API token user, for example root@pam!packer"
+  description = "Checksum for the Ubuntu cloud image. The default points at Ubuntu's current SHA256SUMS file."
+  default     = "file:https://cloud-images.ubuntu.com/noble/current/SHA256SUMS"
 }
 
-variable "proxmox_token" {
-  type        = string
-  sensitive   = true
-  description = "Proxmox API token secret"
-}
-
-variable "proxmox_node" {
-  type        = string
-  description = "Proxmox node name where the template is built"
-}
-
-variable "insecure_skip_tls_verify" {
-  type    = bool
-  default = true
-}
-
-variable "vm_id" {
-  type    = number
-  default = 9000
+variable "output_directory" {
+  type    = string
+  default = "output/ubuntu-24.04-cloudimg"
 }
 
 variable "vm_name" {
   type    = string
-  default = "ubuntu-2404-cloudinit-docker"
+  default = "ubuntu-24.04-cloudimg-amd64.qcow2"
 }
 
-variable "template_description" {
-  type    = string
-  default = "Ubuntu 24.04 LTS cloud-init template with QEMU guest agent, vim, curl, and Docker"
-}
-
-variable "iso_url" {
-  type    = string
-  default = "https://releases.ubuntu.com/24.04/ubuntu-24.04.4-live-server-amd64.iso"
-}
-
-variable "iso_checksum" {
-  type    = string
-  default = "sha256:e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433"
-}
-
-variable "iso_storage_pool" {
-  type    = string
-  default = "local"
-}
-
-variable "storage_pool" {
-  type    = string
-  default = "local-lvm"
-}
-
-variable "disk_size" {
-  type    = string
-  default = "10G"
-}
-
-variable "network_bridge" {
-  type    = string
-  default = "vmbr0"
+variable "disk_size_mb" {
+  type        = number
+  description = "Final image size in MiB."
+  default     = 10240
 }
 
 variable "cpu_cores" {
@@ -86,8 +43,20 @@ variable "cpu_cores" {
 }
 
 variable "memory" {
-  type    = number
-  default = 2048
+  type        = number
+  description = "Guest memory in MiB."
+  default     = 2048
+}
+
+variable "qemu_binary" {
+  type    = string
+  default = "qemu-system-x86_64"
+}
+
+variable "qemu_accelerator" {
+  type        = string
+  description = "Use hvf on macOS, kvm on Linux, or none when hardware acceleration is unavailable."
+  default     = "hvf"
 }
 
 variable "ssh_username" {
@@ -101,67 +70,42 @@ variable "ssh_password" {
   sensitive = true
 }
 
-source "proxmox-iso" "ubuntu_2404" {
-  proxmox_url              = var.proxmox_url
-  username                 = var.proxmox_username
-  token                    = var.proxmox_token
-  insecure_skip_tls_verify = var.insecure_skip_tls_verify
-  node                     = var.proxmox_node
+source "qemu" "ubuntu_2404_cloudimg" {
+  iso_url      = var.cloud_image_url
+  iso_checksum = var.cloud_image_checksum
+  disk_image   = true
 
-  vm_id                = var.vm_id
-  vm_name              = var.vm_name
-  template_name        = var.vm_name
-  template_description = var.template_description
+  output_directory = var.output_directory
+  vm_name          = var.vm_name
+  format           = "qcow2"
+  disk_size        = var.disk_size_mb
+  disk_interface   = "virtio"
 
-  boot_iso {
-    type             = "ide"
-    index            = 2
-    iso_url          = var.iso_url
-    iso_checksum     = var.iso_checksum
-    iso_storage_pool = var.iso_storage_pool
-    unmount          = true
-  }
+  headless    = true
+  accelerator = var.qemu_accelerator
+  qemu_binary = var.qemu_binary
+  cpus        = var.cpu_cores
+  memory      = var.memory
 
-  os              = "l26"
-  qemu_agent      = true
-  scsi_controller = "virtio-scsi-pci"
-
-  cores  = var.cpu_cores
-  memory = var.memory
-
-  disks {
-    type         = "scsi"
-    disk_size    = var.disk_size
-    storage_pool = var.storage_pool
-    format       = "qcow2"
-  }
-
-  network_adapters {
-    model  = "virtio"
-    bridge = var.network_bridge
-  }
-
-  cloud_init              = true
-  cloud_init_storage_pool = var.storage_pool
-
-  boot      = "order=scsi0;ide2"
-  boot_wait = "5s"
-  boot_command = [
-    "e<wait>",
-    "<down><down><down><end>",
-    " autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ ---",
-    "<f10>"
+  cd_files = [
+    "http/meta-data",
+    "http/user-data",
   ]
-
-  http_directory = "http"
+  cd_label = "cidata"
 
   ssh_username = var.ssh_username
   ssh_password = var.ssh_password
-  ssh_timeout  = "45m"
+  ssh_timeout  = "20m"
+
+  shutdown_command = "sudo shutdown -P now"
 }
 
 build {
-  sources = ["source.proxmox-iso.ubuntu_2404"]
+  sources = ["source.qemu.ubuntu_2404_cloudimg"]
+
+  provisioner "shell" {
+    inline = ["sudo cloud-init status --wait"]
+  }
 
   provisioner "shell" {
     script = "scripts/install-docker.sh"
@@ -169,5 +113,10 @@ build {
 
   provisioner "shell" {
     script = "scripts/cleanup.sh"
+  }
+
+  post-processor "manifest" {
+    output     = "${var.output_directory}/manifest.json"
+    strip_path = true
   }
 }

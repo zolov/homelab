@@ -1,0 +1,15 @@
+# Optional overrides for local builds.
+
+# Use "hvf" on macOS, "kvm" on Linux, or "none" without hardware acceleration.
+qemu_accelerator = "kvm"
+
+# qemu_binary = "qemu-system-x86_64"
+# output_directory = "output/ubuntu-24.04-cloudimg"
+# vm_name = "ubuntu-24.04-cloudimg-amd64.qcow2"
+# disk_size_mb = 10240
+# cpu_cores = 2
+# memory = 2048
+
+# Keep these values in sync with http/user-data.
+# ssh_username = "ubuntu"
+# ssh_password = "ubuntu"
