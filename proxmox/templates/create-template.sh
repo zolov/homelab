@@ -163,7 +163,7 @@ qm set "${VM_ID}" \
 qm set "${VM_ID}" \
   --ciuser "${CI_USER}" \
   --sshkeys "${SSH_KEY_PATH}" \
-  --ipconfig0 ip=dhcp
+  --ipconfig0 ip=dhcp,tag=10
 
 ########################################
 # RESIZE DISK
@@ -235,5 +235,6 @@ echo -e "Disk Size:  ${DISK_SIZE}${NC}"
 echo -e
 echo -e "Clone example:${NC}"
 echo -e
-echo -e "qm clone ${VM_ID} 151  --name vm-151 --target proxmox --storage local-lvm --full${NC}"
+echo -e "qm clone ${VM_ID} 151  --name vm-151 --target proxmox --storage local-lvm --full ${NC}"
+echo -e "qm set 151 --net0 virtio,bridge=vmbr0,tag=10 ${NC}"
 
